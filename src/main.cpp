@@ -70,6 +70,38 @@ int main() {
         }
     });
 
+    // Retrieve an object
+    // GET /:bucket/:key
+    server.Get("/:bucket/:key", [&](const httplib::Request& req, httplib::Response& res) {
+        std::string bucket = req.path_params.at("bucket");
+        std::string key    = req.path_params.at("key");
+
+        if (!bucket_mgr.bucket_exists(bucket)) {
+            res.status = 404;
+            res.set_content("{\"error\": \"bucket not found\"}", "application/json");
+            return;
+        }
+
+        std::string data;
+        if (storage.get_object(bucket, key, data)) {
+            // Detect content type from file extension
+            std::string content_type = "application/octet-stream";
+            auto ext_pos = key.rfind('.');
+            if (ext_pos != std::string::npos) {
+                std::string ext = key.substr(ext_pos);
+                if      (ext == ".jpg" || ext == ".jpeg") content_type = "image/jpeg";
+                else if (ext == ".png")                   content_type = "image/png";
+                else if (ext == ".txt")                   content_type = "text/plain";
+                else if (ext == ".json")                  content_type = "application/json";
+            }
+            res.status = 200;
+            res.set_content(data, content_type);
+        } else {
+            res.status = 404;
+            res.set_content("{\"error\": \"object not found\"}", "application/json");
+        }
+    });
+
     // Catch-all for unrecognised routes
     server.set_error_handler([](const httplib::Request&, httplib::Response& res) {
         res.status = 404;
