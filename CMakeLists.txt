@@ -16,6 +16,7 @@ FetchContent_MakeAvailable(httplib)
 add_executable(mini_s3
     src/main.cpp
     src/bucket_manager.cpp
+    src/storage_engine.cpp
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -1,10 +1,12 @@
 #include <httplib.h>
 #include <iostream>
 #include "bucket_manager.h"
+#include "storage_engine.h"
 
 int main() {
     httplib::Server server;
     BucketManager bucket_mgr("storage/data");
+    StorageEngine storage("storage/data");
 
     // Health check
     server.Get("/health", [](const httplib::Request&, httplib::Response& res) {
@@ -12,7 +14,6 @@ int main() {
     });
 
     // Create a bucket
-    // PUT /bucket/{name}
     server.Put("/bucket/:name", [&](const httplib::Request& req, httplib::Response& res) {
         std::string name = req.path_params.at("name");
         if (bucket_mgr.create_bucket(name)) {
@@ -25,7 +26,6 @@ int main() {
     });
 
     // Delete a bucket
-    // DELETE /bucket/{name}
     server.Delete("/bucket/:name", [&](const httplib::Request& req, httplib::Response& res) {
         std::string name = req.path_params.at("name");
         if (bucket_mgr.delete_bucket(name)) {
@@ -38,7 +38,6 @@ int main() {
     });
 
     // List all buckets
-    // GET /buckets
     server.Get("/buckets", [&](const httplib::Request&, httplib::Response& res) {
         auto buckets = bucket_mgr.list_buckets();
         std::string json = "[";
@@ -48,6 +47,27 @@ int main() {
         }
         json += "]";
         res.set_content(json, "application/json");
+    });
+
+    // Upload an object
+    // PUT /:bucket/:key
+    server.Put("/:bucket/:key", [&](const httplib::Request& req, httplib::Response& res) {
+        std::string bucket = req.path_params.at("bucket");
+        std::string key    = req.path_params.at("key");
+
+        if (!bucket_mgr.bucket_exists(bucket)) {
+            res.status = 404;
+            res.set_content("{\"error\": \"bucket not found\"}", "application/json");
+            return;
+        }
+
+        if (storage.put_object(bucket, key, req.body)) {
+            res.status = 200;
+            res.set_content("{\"message\": \"object uploaded\"}", "application/json");
+        } else {
+            res.status = 500;
+            res.set_content("{\"error\": \"failed to write object\"}", "application/json");
+        }
     });
 
     // Catch-all for unrecognised routes
