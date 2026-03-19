@@ -2,11 +2,13 @@
 #include <iostream>
 #include "bucket_manager.h"
 #include "storage_engine.h"
+#include "metadata_manager.h"
 
 int main() {
     httplib::Server server;
-    BucketManager bucket_mgr("storage/data");
-    StorageEngine storage("storage/data");
+    BucketManager   bucket_mgr("storage/data");
+    StorageEngine   storage("storage/data");
+    MetadataManager metadata("storage/metadata/objects.json");
 
     // Health check
     server.Get("/health", [](const httplib::Request&, httplib::Response& res) {
@@ -55,6 +57,29 @@ int main() {
         res.set_content(json, "application/json");
     });
 
+    // List objects in a bucket
+    // GET /:bucket
+    server.Get("/:bucket", [&](const httplib::Request& req, httplib::Response& res) {
+        std::string bucket = req.path_params.at("bucket");
+
+        if (!bucket_mgr.bucket_exists(bucket)) {
+            res.status = 404;
+            res.set_content("{\"error\": \"bucket not found\"}", "application/json");
+            return;
+        }
+
+        auto objects = metadata.list(bucket);
+        std::string json = "[";
+        for (size_t i = 0; i < objects.size(); ++i) {
+            json += "{\"key\":\"" + objects[i].key +
+                    "\",\"size\":"  + std::to_string(objects[i].size) +
+                    ",\"created_at\":" + std::to_string(objects[i].created_at) + "}";
+            if (i + 1 < objects.size()) json += ",";
+        }
+        json += "]";
+        res.set_content(json, "application/json");
+    });
+
     // Upload an object
     // PUT /:bucket/:key
     server.Put("/:bucket/:key", [&](const httplib::Request& req, httplib::Response& res) {
@@ -68,6 +93,7 @@ int main() {
         }
 
         if (storage.put_object(bucket, key, req.body)) {
+            metadata.put(bucket, key, req.body.size());
             res.status = 200;
             res.set_content("{\"message\": \"object uploaded\"}", "application/json");
         } else {
@@ -121,6 +147,7 @@ int main() {
         }
 
         if (storage.delete_object(bucket, key)) {
+            metadata.remove(bucket, key);
             res.status = 200;
             res.set_content("{\"message\": \"object deleted\"}", "application/json");
         } else {
