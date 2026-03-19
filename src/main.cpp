@@ -25,16 +25,22 @@ int main() {
         }
     });
 
-    // Delete a bucket
+    // Delete a bucket (only if empty)
     server.Delete("/bucket/:name", [&](const httplib::Request& req, httplib::Response& res) {
         std::string name = req.path_params.at("name");
-        if (bucket_mgr.delete_bucket(name)) {
-            res.status = 200;
-            res.set_content("{\"message\": \"bucket deleted\"}", "application/json");
-        } else {
+        if (!bucket_mgr.bucket_exists(name)) {
             res.status = 404;
             res.set_content("{\"error\": \"bucket not found\"}", "application/json");
+            return;
         }
+        if (!bucket_mgr.is_empty(name)) {
+            res.status = 409;
+            res.set_content("{\"error\": \"bucket is not empty\"}", "application/json");
+            return;
+        }
+        bucket_mgr.delete_bucket(name);
+        res.status = 200;
+        res.set_content("{\"message\": \"bucket deleted\"}", "application/json");
     });
 
     // List all buckets
@@ -102,10 +108,33 @@ int main() {
         }
     });
 
-    // Catch-all for unrecognised routes
+    // Delete an object
+    // DELETE /:bucket/:key
+    server.Delete("/:bucket/:key", [&](const httplib::Request& req, httplib::Response& res) {
+        std::string bucket = req.path_params.at("bucket");
+        std::string key    = req.path_params.at("key");
+
+        if (!bucket_mgr.bucket_exists(bucket)) {
+            res.status = 404;
+            res.set_content("{\"error\": \"bucket not found\"}", "application/json");
+            return;
+        }
+
+        if (storage.delete_object(bucket, key)) {
+            res.status = 200;
+            res.set_content("{\"message\": \"object deleted\"}", "application/json");
+        } else {
+            res.status = 404;
+            res.set_content("{\"error\": \"object not found\"}", "application/json");
+        }
+    });
+
+    // Catch-all: only fires for unmatched routes (body will be empty)
     server.set_error_handler([](const httplib::Request&, httplib::Response& res) {
-        res.status = 404;
-        res.set_content("{\"error\": \"not found\"}", "application/json");
+        if (res.body.empty()) {
+            res.status = 404;
+            res.set_content("{\"error\": \"not found\"}", "application/json");
+        }
     });
 
     const int PORT = 8080;

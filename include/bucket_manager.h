@@ -20,6 +20,7 @@ public:
     std::vector<std::string> list_buckets() const;
 
     bool bucket_exists(const std::string& name) const;
+    bool is_empty(const std::string& name) const;
 
 private:
     fs::path root_;

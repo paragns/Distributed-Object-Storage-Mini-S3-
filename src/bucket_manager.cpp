@@ -37,3 +37,8 @@ std::vector<std::string> BucketManager::list_buckets() const {
 bool BucketManager::bucket_exists(const std::string& name) const {
     return fs::exists(root_ / name);
 }
+
+bool BucketManager::is_empty(const std::string& name) const {
+    fs::path bucket_path = root_ / name;
+    return fs::is_empty(bucket_path);
+}
