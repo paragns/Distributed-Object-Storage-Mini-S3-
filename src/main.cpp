@@ -72,8 +72,9 @@ int main() {
         std::string json = "[";
         for (size_t i = 0; i < objects.size(); ++i) {
             json += "{\"key\":\"" + objects[i].key +
-                    "\",\"size\":"  + std::to_string(objects[i].size) +
-                    ",\"created_at\":" + std::to_string(objects[i].created_at) + "}";
+                    "\",\"size\":"        + std::to_string(objects[i].size) +
+                    ",\"chunk_count\":"   + std::to_string(objects[i].chunk_count) +
+                    ",\"created_at\":"    + std::to_string(objects[i].created_at) + "}";
             if (i + 1 < objects.size()) json += ",";
         }
         json += "]";
@@ -93,7 +94,8 @@ int main() {
         }
 
         if (storage.put_object(bucket, key, req.body)) {
-            metadata.put(bucket, key, req.body.size());
+            size_t chunks = storage.get_chunk_count(bucket, key);
+            metadata.put(bucket, key, req.body.size(), chunks);
             res.status = 200;
             res.set_content("{\"message\": \"object uploaded\"}", "application/json");
         } else {

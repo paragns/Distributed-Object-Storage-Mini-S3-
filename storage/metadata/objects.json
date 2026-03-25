@@ -1,2 +1,3 @@
-{"bucket":"photos","key":"image.jpg","size":11,"created_at":1773915923}
-{"bucket":"photos","key":"avatar.png","size":10,"created_at":1773915933}
+{"bucket":"photos","key":"image.jpg","size":11,"created_at":1773915923,"chunk_count":1}
+{"bucket":"photos","key":"avatar.png","size":10,"created_at":1773915933,"chunk_count":1}
+{"bucket":"photos","key":"large.txt","size":87,"created_at":1773942258,"chunk_count":2}

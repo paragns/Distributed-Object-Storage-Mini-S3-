@@ -9,6 +9,7 @@ struct ObjectMetadata {
     std::string key;
     size_t      size;
     std::time_t created_at;
+    size_t      chunk_count;
 };
 
 class MetadataManager {
@@ -16,7 +17,7 @@ public:
     explicit MetadataManager(const std::string& metadata_path);
 
     // Record metadata when an object is uploaded
-    void put(const std::string& bucket, const std::string& key, size_t size);
+    void put(const std::string& bucket, const std::string& key, size_t size, size_t chunk_count);
 
     // Remove metadata when an object is deleted
     void remove(const std::string& bucket, const std::string& key);

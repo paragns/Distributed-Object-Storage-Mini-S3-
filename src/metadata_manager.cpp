@@ -30,10 +30,12 @@ static ObjectMetadata parse_record(const std::string& line) {
         }
     };
 
-    obj.bucket     = extract("bucket");
-    obj.key        = extract("key");
-    obj.size       = std::stoul(extract("size"));
-    obj.created_at = std::stol(extract("created_at"));
+    obj.bucket      = extract("bucket");
+    obj.key         = extract("key");
+    obj.size        = std::stoul(extract("size"));
+    obj.created_at  = std::stol(extract("created_at"));
+    std::string cc  = extract("chunk_count");
+    obj.chunk_count = cc.empty() ? 1 : std::stoul(cc);
     return obj;
 }
 
@@ -41,7 +43,8 @@ static std::string serialize_record(const ObjectMetadata& obj) {
     return "{\"bucket\":\"" + obj.bucket +
            "\",\"key\":\"" + obj.key +
            "\",\"size\":"  + std::to_string(obj.size) +
-           ",\"created_at\":" + std::to_string(obj.created_at) + "}";
+           ",\"created_at\":" + std::to_string(obj.created_at) +
+           ",\"chunk_count\":" + std::to_string(obj.chunk_count) + "}";
 }
 
 // --- Core operations ---
@@ -67,24 +70,26 @@ void MetadataManager::save(const std::vector<ObjectMetadata>& records) const {
     }
 }
 
-void MetadataManager::put(const std::string& bucket, const std::string& key, size_t size) {
+void MetadataManager::put(const std::string& bucket, const std::string& key, size_t size, size_t chunk_count) {
     auto records = load();
 
     // Update if already exists, otherwise append
     for (auto& r : records) {
         if (r.bucket == bucket && r.key == key) {
-            r.size       = size;
-            r.created_at = std::time(nullptr);
+            r.size        = size;
+            r.created_at  = std::time(nullptr);
+            r.chunk_count = chunk_count;
             save(records);
             return;
         }
     }
 
     ObjectMetadata obj;
-    obj.bucket     = bucket;
-    obj.key        = key;
-    obj.size       = size;
-    obj.created_at = std::time(nullptr);
+    obj.bucket      = bucket;
+    obj.key         = key;
+    obj.size        = size;
+    obj.created_at  = std::time(nullptr);
+    obj.chunk_count = chunk_count;
     records.push_back(obj);
     save(records);
 }
